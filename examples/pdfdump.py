@@ -23,7 +23,8 @@ sys.path.insert(0, parentdir)
 
 # --- Import pdrfw stuff ---
 from pdfrw import PdfReader, PdfWriter
-from pdfrw.findobjs import page_per_xobj
+from pdfrw.objects.pdfarray import PdfArray
+from pdfrw.objects.pdfname import BasePdfName
 
 # --- Main ---
 inpfn, = sys.argv[1:]
@@ -70,9 +71,16 @@ if not '/Filter' in reader.pages[0]['/Contents']:
     contents_plain = reader.pages[0]['/Contents'].stream
 else:
     print('stream IS compressed')
-    # For some reason '/Filter' is a list of strings. Take first element.
-    filter = reader.pages[0]['/Contents']['/Filter'][0]
+    # For some reason '/Filter' may be a list of strings. Take first element.
+    if type(reader.pages[0]['/Contents']['/Filter']) is PdfArray:
+        filter = reader.pages[0]['/Contents']['/Filter'][0]
+    elif type(reader.pages[0]['/Contents']['/Filter']) is BasePdfName:
+        filter = reader.pages[0]['/Contents']['/Filter']
+    else:
+        print('Unknwon error')
+        sys.exit(0)
     print('filter = "{0}"'.format(filter))
+
     if filter == "/FlateDecode":
         print('stream is compressed with /FlateDecode filter')
         contents_comp = reader.pages[0]['/Contents'].stream
