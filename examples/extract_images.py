@@ -15,6 +15,7 @@ import os
 import zlib
 from PIL import Image
 from pprint import pprint
+import types
 
 # --- Add pdfrw module to Python path ---
 currentdir = os.path.dirname(os.path.realpath(__file__))
@@ -45,7 +46,7 @@ for i, page in enumerate(page_list):
         # pprint(resource)
         # print('----------------')
 
-        # >> Get /XObject dictionary data. Each page may have 0, 1 or more /XObjects
+        # >> Traverse /XObject dictionary data. Each page may have 0, 1 or more /XObjects
         # >> If there is more than 1 image in the page there could be more than 1 /XObject.
         # >> Some /XObjects are not images, for example, /Subtype = /Form.
         # >> NOTE Also, images may be inside the /Resources of a /From /XObject.
@@ -82,6 +83,12 @@ for i, page in enumerate(page_list):
                 filter_name = xobj_dic['/Filter'][0]
             elif type(xobj_dic['/Filter']) is BasePdfName:
                 filter_name = xobj_dic['/Filter']
+            elif type(xobj_dic['/Filter']) is types.NoneType:
+                print('type(xobj_dic[\'/Filter\']) is types.NoneType. Skipping.')
+                print('--- xobj_dic ---')
+                pprint(xobj_dic)
+                print('----------------')
+                continue
             else:
                 print('Unknown type(xobj_dic[\'/Filter\']) = "{0}"'.format(type(xobj_dic['/Filter'])))
                 sys.exit(1)
@@ -90,11 +97,31 @@ for i, page in enumerate(page_list):
             height = int(xobj_dic['/Height'])
             width = int(xobj_dic['/Width'])
 
+            # --- Print info ---
             print('/Filter = "{0}"'.format(filter_name))
             print('/ColorSpace = "{0}"'.format(color_space))
             print('/BitsPerComponent = "{0}"'.format(bits_per_component))
             print('/Height = "{0}"'.format(height))
             print('/Width = "{0}"'.format(width))
+
+            # NOTE /Filter = /FlateDecode may be PNG images. Check for magic number.
+            jpg_magic_number = '\xff\xd8'
+            png_magic_number = '\x89\x50\x4E\x47'
+            gif87_magic_number = '\x47\x49\x46\x38\x37\x61'
+            gif89_magic_number = '\x47\x49\x46\x38\x39\x61'
+
+            # >> Check for magic numbers
+            stream_raw = xobj_dic.stream
+            if stream_raw[0:2] == jpg_magic_number:
+                print('JPG magic number detected!')
+            elif stream_raw[0:4] == png_magic_number:
+                print('PNG magic number detected!')
+            elif stream_raw[0:6] == gif87_magic_number:
+                print('GIF87a magic number detected!')
+            elif stream_raw[0:6] == gif89_magic_number:
+                print('GIF89a magic number detected!')
+            else:
+                print('Not known image magic number')
 
             # --- PNG embedded images ---
             # >> WARNING DCTDecode is JPEG, not PNG!!!
