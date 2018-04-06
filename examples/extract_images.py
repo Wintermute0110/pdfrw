@@ -46,16 +46,27 @@ Links:
   Extract images from pdf: http://stackoverflow.com/questions/2693820/extract-images-from-pdf-without-resampling-in-python
   Extract images coded with CCITTFaxDecode in .net: http://stackoverflow.com/questions/2641770/extracting-image-from-pdf-with-ccittfaxdecode-filter
   TIFF format and tags: http://www.awaresystems.be/imaging/tiff/faq.html
+                        https://www.fileformat.info/format/tiff/egff.htm
+                        
+  If the PDF option EncodedByteAlign is true I think the TIFF Tag T4Options must be set.
+  See https://www.awaresystems.be/imaging/tiff/tifftags/t4options.html
+  The PDF EncodedByteAlign seems to be called GROUP3OPT_FILLBITS in libtiff. However, for some reason
+  GROUP3OPT_FILLBITS is only supported for the Group3 decoder and not for the Group4 decoder.
+  SumatraPDF uses MuPDF and is able to decode avsp.pdf images. MuPDF has a internal Group4 decoder.
+  I believe Pyton PIL relies on libtiff.
 """
 def _tiff_header_for_CCITT(width, height, img_size, CCITT_group = 4):
-    tiff_header_struct = '<' + '2s' + 'H' + 'L' + 'H' + 'HHLL' * 8 + 'H'
+    num_tags = 8
+    tiff_header_struct = '<' + '2s' + 'H' + 'L' + 'H' + 'HHLL' * num_tags + 'H'
 
+    # >> Does not work as expected ...
+    # 292, 4, 1, 4,  # TIFFTAG_GROUP3OPTIONS, LONG, 1, TIFF Tag T4Options
     return struct.pack(
        tiff_header_struct,
        'II',  # Byte order indication: Little endian
        42,  # Version number (always 42)
        8,  # Offset to first IFD
-       8,  # Number of tags in IFD
+       num_tags,  # Number of tags in IFD
        256, 4, 1, width,  # ImageWidth, LONG, 1, width
        257, 4, 1, height,  # ImageLength, LONG, 1, lenght
        258, 3, 1, 1,  # BitsPerSample, SHORT, 1, 1
